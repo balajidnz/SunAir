@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CluColor — encode spec</title>
+<link rel="stylesheet" href="test.css">
+</head>
+<body>
+<h1>URL message codec</h1>
+<p class="sub" id="summary">running…</p>
+<ol id="results"></ol>
+
+<script type="module">
+import { runSpec } from '../tools/encode.spec.js';
+
+const results = runSpec();
+const failed = results.filter((r) => !r.ok);
+
+const list = document.getElementById('results');
+for (const r of results) {
+  const li = document.createElement('li');
+  li.className = r.ok ? 'ok' : 'fail';
+
+  const name = document.createElement('span');
+  name.className = 'name';
+  name.textContent = r.name;          // textContent, never innerHTML — same rule as the game
+  li.append(name);
+
+  if (r.detail !== undefined) {
+    const d = document.createElement('code');
+    d.textContent = 'got: ' + r.detail;
+    li.append(d);
+  }
+  list.append(li);
+}
+
+const summary = document.getElementById('summary');
+summary.textContent = failed.length
+  ? `${failed.length} of ${results.length} FAILED`
+  : `all ${results.length} passed`;
+summary.className = 'sub ' + (failed.length ? 'fail' : 'ok');
+
+// Report back to tools/serve.py so the result is readable from the terminal.
+// Silently ignored when opened via file:// or a plain static server.
+fetch('/__report', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ suite: 'encode', ua: navigator.userAgent, results }),
+}).catch(() => {});
+</script>
+</body>
+</html>

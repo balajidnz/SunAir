@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CluColor — shots</title>
+<link rel="stylesheet" href="../tests/test.css">
+</head>
+<body>
+<h1>scene captures</h1>
+<p class="sub" id="status">rendering…</p>
+<div id="out"></div>
+
+<script type="module">
+import { W, H, BENCH, GROUND_Y, drawWorld, drawExempt, drawActor } from '../js/game/world.js';
+import { gradeFilter, tintOpacity, TINT_MAX } from '../js/game/colorGrade.js';
+
+/**
+ * Renders the same scene the game renders, at each story beat, and bakes the
+ * colour grade into real pixels so the result can be inspected as an image.
+ *
+ * The game applies the grade as a CSS filter on the canvas element, which is
+ * invisible to toDataURL(). Here we re-apply the identical filter string via
+ * ctx.filter onto a compositing canvas — same CSS filter spec, same result.
+ */
+const SCALE = 3;
+
+const BEATS = [
+  { name: '0-dead',   colorLevel: 0.00, cam: 0,               note: 'act 1 — nothing solved' },
+  { name: '1-bench',  colorLevel: 0.00, cam: BENCH.x - W / 2, note: 'the red bench, in a dead world' },
+  { name: '2-riddle', colorLevel: 0.33, cam: 300,             note: 'lion riddle solved' },
+  { name: '3-photo',  colorLevel: 0.66, cam: 900,             note: 'photo frame solved' },
+  { name: '4-alive',  colorLevel: 1.00, cam: BENCH.x - W / 2, note: 'morse solved — world alive' },
+];
+
+/** @param {number} cam @param {number} colorLevel */
+function renderBeat(cam, colorLevel) {
+  const world = document.createElement('canvas');
+  world.width = W; world.height = H;
+  const wc = world.getContext('2d');
+  wc.imageSmoothingEnabled = false;
+  drawWorld(wc, cam);
+  drawActor(wc, 60, GROUND_Y, '#b8607a');
+  drawActor(wc, 86, GROUND_Y, '#5f7fa8');
+
+  const exempt = document.createElement('canvas');
+  exempt.width = W; exempt.height = H;
+  const ec = exempt.getContext('2d');
+  ec.imageSmoothingEnabled = false;
+  drawExempt(ec, cam);
+
+  // Composite exactly as the browser composites the live page:
+  //   graded world  ->  unfiltered exempt layer  ->  cool tint wash
+  const out = document.createElement('canvas');
+  out.width = W * SCALE; out.height = H * SCALE;
+  const oc = out.getContext('2d');
+  oc.imageSmoothingEnabled = false;
+  oc.scale(SCALE, SCALE);
+
+  oc.filter = gradeFilter(colorLevel);
+  oc.drawImage(world, 0, 0);
+  oc.filter = 'none';
+
+  oc.drawImage(exempt, 0, 0);
+
+  oc.globalAlpha = tintOpacity(colorLevel);
+  oc.fillStyle = '#2a3040';
+  oc.fillRect(0, 0, W, H);
+  oc.globalAlpha = 1;
+
+  return out;
+}
+
+const shots = [];
+const out = document.getElementById('out');
+
+for (const beat of BEATS) {
+  const canvas = renderBeat(beat.cam, beat.colorLevel);
+
+  const label = document.createElement('p');
+  label.className = 'sub';
+  label.textContent = `${beat.name} — ${beat.note} (colorLevel ${beat.colorLevel})`;
+  out.append(label, canvas);
+
+  shots.push({ name: beat.name, png: canvas.toDataURL('image/png') });
+}
+
+const res = await fetch('/__shot', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ shots }),
+}).catch(() => null);
+
+const status = document.getElementById('status');
+status.textContent = res && res.ok
+  ? `saved ${shots.length} shots (tint max ${TINT_MAX})`
+  : 'rendered, but could not save — is tools/serve.py running?';
+status.className = 'sub ' + (res && res.ok ? 'ok' : 'fail');
+</script>
+</body>
+</html>

@@ -3,39 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="content-security-policy"
+      content="default-src 'self'; img-src 'self' data:; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex, nofollow">
-<title>sunair.fun</title>
-<style>
-  :root { color-scheme: dark; }
-  html, body {
-    height: 100%;
-    margin: 0;
-    background: #14161c;
-    color: #6f7686;
-    font: 500 14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    -webkit-font-smoothing: antialiased;
-  }
-  .dot {
-    width: 10px;
-    height: 10px;
-    margin: 0 auto 22px;
-    background: #c8433f;
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: .25; }
-    50%      { opacity: 1; }
-  }
-  p { margin: 0; letter-spacing: .18em; text-transform: uppercase; font-size: 12px; }
-</style>
+<title>CluColor</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <main>
-    <div class="dot"></div>
-    <p>soon</p>
-  </main>
+
+<!-- The stage keeps a 16:9 box centred in the window; everything inside is
+     positioned against it, so the DOM UI lines up with the canvas at any scale. -->
+<div id="stage">
+  <!-- The world. Filtered by colorGrade. -->
+  <canvas id="game" width="320" height="180"></canvas>
+
+  <!-- Objects exempt from the grade — the red bench keeps its colour in the
+       dead world. Same backing store, same camera, never filtered. -->
+  <canvas id="fx" width="320" height="180"></canvas>
+
+  <!-- Cool grey wash. Opacity is driven by colorLevel; this is what makes the
+       desaturated world read as *dead* rather than merely monochrome. -->
+  <div id="tint"></div>
+
+  <!-- All text and interaction. DOM, never canvas: canvas text input is a
+       two-day rabbit hole that breaks keyboards, emoji and font fallback. -->
+  <div id="ui"></div>
+</div>
+
+<!-- Dev only. Stripped before ship. -->
+<div id="debug">
+  <label>colorLevel <input id="debug-color" type="range" min="0" max="1" step="0.01" value="0"></label>
+  <output id="debug-color-value">0.00</output>
+</div>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>

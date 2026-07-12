@@ -1,0 +1,89 @@
+:root {
+  color-scheme: dark;
+  --dead: #2a3040; /* the cool wash over the colourless world */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: #0d0f14;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+/* 16:9 box, as large as fits. The canvas backing store stays 320x180 forever;
+   only this box changes size. */
+#stage {
+  position: relative;
+  width: min(100vw, calc(100dvh * 16 / 9));
+  height: min(100dvh, calc(100vw * 9 / 16));
+  touch-action: none; /* or a touch-drag scrolls the page instead of walking */
+}
+
+#stage > canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* Filtered by colorGrade.js. */
+#game { z-index: 1; }
+
+/* Never filtered — this is how the bench stays red in a grey world. */
+#fx {
+  z-index: 2;
+  pointer-events: none;
+}
+
+#tint {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--dead);
+  opacity: 0.22;
+  pointer-events: none;
+  transition: opacity 120ms linear;
+}
+
+#ui {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none; /* children opt back in individually */
+}
+
+#ui > * { pointer-events: auto; }
+
+/* --- dev only ------------------------------------------------------------ */
+
+#debug {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #181b23e0;
+  color: #8b93a4;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+#debug input { width: 160px; }
+#debug output { min-width: 3.2em; color: #c9cedb; }
