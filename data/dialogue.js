@@ -30,7 +30,7 @@ export const NAMES = { boy: 'BOY', girl: 'GIRL' };
 
 /** Fallback ending, shown when the URL carries no custom message. */
 export const DEFAULT_MESSAGE =
-  'Happy birthday.\n\nI would find you in any world — even a grey one.';
+  'Spring is always around the corner - Even in a grey world.';
 
 export const DIALOGUE = {
   // --- waking ------------------------------------------------------------
@@ -97,13 +97,33 @@ export const DIALOGUE = {
 
   // --- act 2: the house of frames ----------------------------------------
   house: {
+    // Outside, on the step.
     approach: [
-      { who: 'companion', text: 'A house. Out here?' },
+      { who: 'companion', text: 'A house. Out here?!' },
       { who: 'player', text: 'The door\'s open.' },
+      { who: 'companion', text: 'Someone left it open for us.' },
+      { who: 'player', text: '...or never got to close it.' },
+      { who: 'companion', text: 'Come on.' },
+    ],
+
+    // Played over black, mid-cutscene, as they step through the door.
+    entering: [
+      { who: 'system', text: 'They step inside.' },
+    ],
+
+    // Inside. These lines were always written from IN the house — they used to
+    // play on the doorstep, which made no sense.
+    inside: [
       { who: 'companion', text: 'Photographs. The walls are covered in them.' },
       { who: 'companion', text: 'They\'re all of... I can\'t make them out. They\'re all blurred.' },
       { who: 'player', text: 'Except this one.' },
       { who: 'companion', text: 'It\'s in pieces. Someone broke it apart.' },
+    ],
+
+    // Back out on the road.
+    leaving: [
+      { who: 'companion', text: 'We can\'t stay here.' },
+      { who: 'player', text: 'No. But we know something now.' },
     ],
 
     puzzle: {

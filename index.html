@@ -11,29 +11,22 @@
 </head>
 <body>
 
-<!-- The stage keeps a 16:9 box centred in the window; everything inside is
-     positioned against it, so the DOM UI lines up with the canvas at any scale. -->
 <div id="stage">
-  <!-- The world. Filtered by colorGrade. -->
-  <canvas id="game" width="320" height="180"></canvas>
+  <!-- One world canvas. Layers are composited inside it with ctx.filter, which
+       is what lets the bench sit BEHIND the characters while staying exempt
+       from the grey grade. -->
+  <canvas id="game" width="480" height="270"></canvas>
 
-  <!-- Objects exempt from the grade — the red bench keeps its colour in the
-       dead world. Same backing store, same camera, never filtered. -->
-  <canvas id="fx" width="320" height="180"></canvas>
-
-  <!-- Cool grey wash. Opacity is driven by colorLevel; this is what makes the
+  <!-- Cool grey wash. Opacity driven by colorLevel; this is what makes the
        desaturated world read as *dead* rather than merely monochrome. -->
   <div id="tint"></div>
 
-  <!-- All text and interaction. DOM, never canvas: canvas text input is a
-       two-day rabbit hole that breaks keyboards, emoji and font fallback. -->
+  <!-- All text and interaction. DOM, never canvas. -->
   <div id="ui"></div>
-</div>
 
-<!-- Dev only. Stripped before ship. -->
-<div id="debug">
-  <label>colorLevel <input id="debug-color" type="range" min="0" max="1" step="0.01" value="0"></label>
-  <output id="debug-color-value">0.00</output>
+  <!-- Cutscene fade. Covers the world but NOT the UI, so dialogue can play
+       over black while they step inside the house. -->
+  <div id="fade"></div>
 </div>
 
 <script type="module" src="js/main.js"></script>

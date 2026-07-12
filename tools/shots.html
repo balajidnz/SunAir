@@ -6,79 +6,186 @@
 <link rel="stylesheet" href="../tests/test.css">
 </head>
 <body>
-<h1>scene captures</h1>
+<h1>the arc</h1>
 <p class="sub" id="status">rendering…</p>
 <div id="out"></div>
 
 <script type="module">
-import { W, H, BENCH, GROUND_Y, drawWorld, drawExempt, drawActor } from '../js/game/world.js';
-import { gradeFilter, tintOpacity, TINT_MAX } from '../js/game/colorGrade.js';
+import { W, H, BENCH, GROUND_Y, createAtlases, drawWorld, drawBench, drawProps } from '../js/game/world.js';
+import { LION_X, HOUSE_X } from '../js/game/story.js';
+import { gradeFilter, tintOpacity } from '../js/game/colorGrade.js';
+import { loadImages, loadImage } from '../js/engine/assets.js';
+import { drawCharacter } from '../js/engine/sprites.js';
 
 /**
- * Renders the same scene the game renders, at each story beat, and bakes the
- * colour grade into real pixels so the result can be inspected as an image.
- *
- * The game applies the grade as a CSS filter on the canvas element, which is
- * invisible to toDataURL(). Here we re-apply the identical filter string via
- * ctx.filter onto a compositing canvas — same CSS filter spec, same result.
+ * Renders the exact scene the game renders, at each story beat, and BAKES the
+ * colour grade into real pixels — a CSS filter on an element never shows up in
+ * toDataURL(), so we re-apply the identical filter string via ctx.filter.
  */
-const SCALE = 3;
+const SCALE = 2;
+
+const images = await loadImages({
+  tiles: '../assets/img/tiles/tiles.png',
+  farm: '../assets/img/tiles/farm.png',
+  bg: '../assets/img/tiles/backgrounds.png',
+  bench: '../assets/img/props/bench.png',
+  lion: '../assets/img/props/lion.png',
+  house: '../assets/img/props/house.png',
+  room: '../assets/img/rooms/house.png',
+});
+const atlases = createAtlases(images);
+
+// Same measured geometry the game uses — feet-anchored, not box-anchored.
+const boy = { idle: await loadImage('../assets/img/boy/idle.png'), walk: [], size: 56, padBelow: 8, centreX: 28 };
+const girl = { idle: await loadImage('../assets/img/girl/idle.png'), walk: [], size: 48, padBelow: 6, centreX: 23 };
 
 const BEATS = [
-  { name: '0-dead',   colorLevel: 0.00, cam: 0,               note: 'act 1 — nothing solved' },
-  { name: '1-bench',  colorLevel: 0.00, cam: BENCH.x - W / 2, note: 'the red bench, in a dead world' },
-  { name: '2-riddle', colorLevel: 0.33, cam: 300,             note: 'lion riddle solved' },
-  { name: '3-photo',  colorLevel: 0.66, cam: 900,             note: 'photo frame solved' },
-  { name: '4-alive',  colorLevel: 1.00, cam: BENCH.x - W / 2, note: 'morse solved — world alive' },
+  { name: '0-dead', color: 0.00, cam: 380, note: 'act 1 — nothing solved. dead world.' },
+  { name: '1-lion', color: 0.00, cam: LION_X - W / 2, note: 'the lion idol (placeholder prop)' },
+  { name: '2-riddle-solved', color: 0.33, cam: 380, note: 'the lion riddle — colour begins' },
+  { name: '3-house', color: 0.33, cam: HOUSE_X - W / 2, note: 'the house (placeholder prop)' },
+  { name: '4-photo-solved', color: 0.66, cam: 1400, note: 'the photo frame — the world remembers' },
+  { name: '5-alive', color: 1.00, cam: 380, note: 'morse solved — the world blooms' },
+  { name: '6-at-bench', color: 1.00, cam: BENCH.x - W / 2, note: 'the ending — CHECK: bench behind them' },
+  { name: '7-bench-in-dead-world', color: 0.00, cam: BENCH.x - W / 2, note: 'REGRESSION CHECK: bench must still be RED at colorLevel 0' },
 ];
 
-/** @param {number} cam @param {number} colorLevel */
-function renderBeat(cam, colorLevel) {
+/**
+ * Mirrors the game's compositing exactly:
+ *   graded world  ->  UNFILTERED bench  ->  graded actors  ->  cool tint wash
+ * The bench sits behind the actors, which is what lets them sit ON it.
+ *
+ * @param {number} cam @param {number} color
+ */
+function renderBeat(cam, color) {
   const world = document.createElement('canvas');
   world.width = W; world.height = H;
   const wc = world.getContext('2d');
   wc.imageSmoothingEnabled = false;
-  drawWorld(wc, cam);
-  drawActor(wc, 60, GROUND_Y, '#b8607a');
-  drawActor(wc, 86, GROUND_Y, '#5f7fa8');
+  drawWorld(wc, atlases, cam, color, 0);
+  drawProps(wc, images.lion, images.house, cam, LION_X, HOUSE_X);
 
-  const exempt = document.createElement('canvas');
-  exempt.width = W; exempt.height = H;
-  const ec = exempt.getContext('2d');
-  ec.imageSmoothingEnabled = false;
-  drawExempt(ec, cam);
+  const buf = document.createElement('canvas');
+  buf.width = W; buf.height = H;
+  const b = buf.getContext('2d');
+  b.imageSmoothingEnabled = false;
 
-  // Composite exactly as the browser composites the live page:
-  //   graded world  ->  unfiltered exempt layer  ->  cool tint wash
+  const grade = gradeFilter(color);
+
+  b.filter = grade;
+  b.drawImage(world, 0, 0);
+
+  b.filter = 'none';
+  drawBench(b, images.bench, cam);
+
+  b.filter = grade;
+  drawCharacter(b, girl.idle, girl, W / 2 - 30, GROUND_Y, false);
+  drawCharacter(b, boy.idle, boy, W / 2 + 6, GROUND_Y, false);
+  b.filter = 'none';
+
+  b.globalAlpha = tintOpacity(color);
+  b.fillStyle = '#2a3040';
+  b.fillRect(0, 0, W, H);
+  b.globalAlpha = 1;
+
   const out = document.createElement('canvas');
   out.width = W * SCALE; out.height = H * SCALE;
   const oc = out.getContext('2d');
   oc.imageSmoothingEnabled = false;
-  oc.scale(SCALE, SCALE);
-
-  oc.filter = gradeFilter(colorLevel);
-  oc.drawImage(world, 0, 0);
-  oc.filter = 'none';
-
-  oc.drawImage(exempt, 0, 0);
-
-  oc.globalAlpha = tintOpacity(colorLevel);
-  oc.fillStyle = '#2a3040';
-  oc.fillRect(0, 0, W, H);
-  oc.globalAlpha = 1;
-
+  oc.drawImage(buf, 0, 0, out.width, out.height);
   return out;
 }
 
 const shots = [];
 const out = document.getElementById('out');
 
+// --- the house interior ------------------------------------------------------
+{
+  const { drawInterior, FLOOR_Y, CHAR_SCALE } = await import('../js/game/interior.js');
+
+  for (const [name, color] of [['i-house-inside', 0.33], ['i-house-solved', 0.66]]) {
+    const buf = document.createElement('canvas');
+    buf.width = W; buf.height = H;
+    const b = buf.getContext('2d');
+    b.imageSmoothingEnabled = false;
+
+    const room = document.createElement('canvas');
+    room.width = W; room.height = H;
+    const rc = room.getContext('2d');
+    rc.imageSmoothingEnabled = false;
+    drawInterior(rc, images.room, color);
+
+    b.filter = gradeFilter(color);
+    b.drawImage(room, 0, 0);
+    drawCharacter(b, girl.idle, girl, W / 2 - 68, FLOOR_Y, false, CHAR_SCALE);
+    drawCharacter(b, boy.idle, boy, W / 2 + 62, FLOOR_Y, true, CHAR_SCALE);
+    b.filter = 'none';
+
+    b.globalAlpha = tintOpacity(color);
+    b.fillStyle = '#2a3040';
+    b.fillRect(0, 0, W, H);
+    b.globalAlpha = 1;
+
+    const o = document.createElement('canvas');
+    o.width = W * SCALE; o.height = H * SCALE;
+    const oc = o.getContext('2d');
+    oc.imageSmoothingEnabled = false;
+    oc.drawImage(buf, 0, 0, o.width, o.height);
+
+    const p = document.createElement('p');
+    p.className = 'sub';
+    p.textContent = `${name} — inside the house (colorLevel ${color})`;
+    out.append(p, o);
+    shots.push({ name, png: o.toDataURL('image/png') });
+  }
+}
+
+/**
+ * A single 480px view only fits two trees, which is useless for judging whether
+ * the treeline varies. Stitch consecutive camera positions into one long strip.
+ */
+function renderTreeline(color, views = 3) {
+  const strip = document.createElement('canvas');
+  strip.width = W * views;
+  strip.height = H;
+  const sc = strip.getContext('2d');
+  sc.imageSmoothingEnabled = false;
+
+  for (let i = 0; i < views; i++) {
+    const view = document.createElement('canvas');
+    view.width = W; view.height = H;
+    const vc = view.getContext('2d');
+    vc.imageSmoothingEnabled = false;
+    drawWorld(vc, atlases, 200 + i * W, color, 0);
+
+    sc.filter = gradeFilter(color);
+    sc.drawImage(view, i * W, 0);
+  }
+  sc.filter = 'none';
+
+  sc.globalAlpha = tintOpacity(color);
+  sc.fillStyle = '#2a3040';
+  sc.fillRect(0, 0, strip.width, strip.height);
+  sc.globalAlpha = 1;
+
+  return strip;
+}
+
+for (const [name, color] of [['treeline-alive', 1.0], ['treeline-dead', 0.0]]) {
+  const canvas = renderTreeline(color);
+  const label = document.createElement('p');
+  label.className = 'sub';
+  label.textContent = `${name} — 3 views stitched, to check the trees actually differ`;
+  out.append(label, canvas);
+  shots.push({ name, png: canvas.toDataURL('image/png') });
+}
+
 for (const beat of BEATS) {
-  const canvas = renderBeat(beat.cam, beat.colorLevel);
+  const canvas = renderBeat(beat.cam, beat.color);
 
   const label = document.createElement('p');
   label.className = 'sub';
-  label.textContent = `${beat.name} — ${beat.note} (colorLevel ${beat.colorLevel})`;
+  label.textContent = `${beat.name} — ${beat.note}  (colorLevel ${beat.color})`;
   out.append(label, canvas);
 
   shots.push({ name: beat.name, png: canvas.toDataURL('image/png') });
@@ -91,9 +198,7 @@ const res = await fetch('/__shot', {
 }).catch(() => null);
 
 const status = document.getElementById('status');
-status.textContent = res && res.ok
-  ? `saved ${shots.length} shots (tint max ${TINT_MAX})`
-  : 'rendered, but could not save — is tools/serve.py running?';
+status.textContent = res && res.ok ? `saved ${shots.length} shots` : 'could not save — is serve.py running?';
 status.className = 'sub ' + (res && res.ok ? 'ok' : 'fail');
 </script>
 </body>

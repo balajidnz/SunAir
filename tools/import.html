@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CluColor — asset import</title>
+<link rel="stylesheet" href="../tests/test.css">
+</head>
+<body>
+<h1>asset import</h1>
+<p class="sub" id="status">…</p>
+<pre id="log"></pre>
+<div id="out"></div>
+
+<script type="module">
+import { loadImage } from '../js/engine/assets.js';
+import { keyOutCheckerboard, contentBounds } from './keyout.js';
+
+/**
+ * Turns the generated renders into game-ready sprites:
+ *   key out the fake checkerboard -> crop -> downsample NEAREST-NEIGHBOUR.
+ *
+ * Never smoothing: averaging blurs pixel art. Run once, offline; the results are
+ * committed and the game never does this work.
+ */
+const JOBS = [
+  {
+    name: 'lion',
+    src: '../assets/_raw/lion.png',
+    key: true,
+    // ~2x a person. The boy is 38px of content, so the lion stands 78px.
+    targetH: 78,
+  },
+  {
+    name: 'house-exterior',
+    src: '../assets/_raw/house-exterior.png',
+    key: true,
+    // ~3x a person, so it reads as a real building beside the 38px characters.
+    targetH: 130,
+  },
+  {
+    name: 'house-room',
+    src: '../assets/_raw/house-room.png',
+    key: false,          // an opaque room, no transparency wanted
+    exact: [480, 270],   // fills the canvas
+  },
+];
+
+const lines = [];
+const log = (s) => { lines.push(s); };
+const out = document.getElementById('out');
+const shots = [];
+
+for (const job of JOBS) {
+  log(`\n=== ${job.name} ===`);
+  const img = await loadImage(job.src);
+  log(`source: ${img.width}x${img.height}`);
+
+  const src = document.createElement('canvas');
+  src.width = img.width;
+  src.height = img.height;
+  const sc = src.getContext('2d', { willReadFrequently: true });
+  sc.drawImage(img, 0, 0);
+
+  if (job.key) keyOutCheckerboard(src, log);
+
+  const box = job.key
+    ? contentBounds(src)
+    : { left: 0, top: 0, w: src.width, h: src.height };
+  log(`content: ${box.w}x${box.h} at (${box.left},${box.top})`);
+
+  const [outW, outH] = job.exact
+    ? job.exact
+    : [Math.round(box.w * (job.targetH / box.h)), job.targetH];
+
+  const small = document.createElement('canvas');
+  small.width = outW;
+  small.height = outH;
+  const dc = small.getContext('2d');
+  dc.imageSmoothingEnabled = false;
+  dc.drawImage(src, box.left, box.top, box.w, box.h, 0, 0, outW, outH);
+  log(`-> ${outW}x${outH}`);
+
+  // Preview, zoomed, on a checkerboard so real transparency is obvious.
+  const zoom = Math.max(1, Math.floor(900 / outW));
+  const prev = document.createElement('canvas');
+  prev.width = outW * zoom;
+  prev.height = outH * zoom;
+  const pc = prev.getContext('2d');
+  for (let y = 0; y < prev.height; y += 12) {
+    for (let x = 0; x < prev.width; x += 12) {
+      pc.fillStyle = ((x + y) / 12) % 2 ? '#20242e' : '#171a22';
+      pc.fillRect(x, y, 12, 12);
+    }
+  }
+  pc.imageSmoothingEnabled = false;
+  pc.drawImage(small, 0, 0, prev.width, prev.height);
+
+  const p = document.createElement('p');
+  p.className = 'sub';
+  p.textContent = `${job.name} — ${outW}x${outH}`;
+  out.append(p, prev);
+
+  shots.push({ name: `import-${job.name}`, png: small.toDataURL('image/png') });
+}
+
+await fetch('/__shot', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ shots }),
+}).catch(() => {});
+
+await fetch('/__report', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ suite: 'import' + lines.join('\n'), ua: navigator.userAgent, results: [{ name: 'imported', ok: true }] }),
+}).catch(() => {});
+
+document.getElementById('log').textContent = lines.join('\n');
+document.getElementById('status').textContent = `imported ${JOBS.length}`;
+document.getElementById('status').className = 'sub ok';
+</script>
+</body>
+</html>

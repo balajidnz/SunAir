@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CluColor — tile zoom</title>
+<link rel="stylesheet" href="../tests/test.css">
+</head>
+<body>
+<h1>tile regions, zoomed</h1>
+<p class="sub" id="status">…</p>
+<div id="out"></div>
+
+<script type="module">
+import { loadImages } from '../js/engine/assets.js';
+
+/** Renders a rectangular REGION of the atlas at high zoom, with indices, so
+ *  multi-tile shapes (foliage blobs, trees) can be read as shapes. */
+const REGIONS = [
+  // Hunting for anything bench-shaped: planks, posts, platforms, tables.
+  { name: 'wood-props', col0: 4, row0: 2, cols: 8, rows: 3 },
+  { name: 'structures', col0: 4, row0: 5, cols: 8, rows: 3 },
+  { name: 'foliage-blob', col0: 16, row0: 0, cols: 4, rows: 4 },
+  { name: 'trees', col0: 16, row0: 4, cols: 4, rows: 4 },
+];
+
+const T = 18;
+const ATLAS_COLS = 20;
+const Z = 12;
+
+const { tiles } = await loadImages({ tiles: '../assets/img/tiles/tiles.png' });
+const out = document.getElementById('out');
+const shots = [];
+
+for (const r of REGIONS) {
+  const c = document.createElement('canvas');
+  c.width = r.cols * T * Z;
+  c.height = r.rows * T * Z;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  for (let y = 0; y < r.rows; y++) {
+    for (let x = 0; x < r.cols; x++) {
+      ctx.fillStyle = (x + y) % 2 ? '#20242e' : '#171a22';
+      ctx.fillRect(x * T * Z, y * T * Z, T * Z, T * Z);
+    }
+  }
+
+  for (let y = 0; y < r.rows; y++) {
+    for (let x = 0; x < r.cols; x++) {
+      const col = r.col0 + x;
+      const row = r.row0 + y;
+      const idx = row * ATLAS_COLS + col;
+      ctx.drawImage(tiles, col * T, row * T, T, T, x * T * Z, y * T * Z, T * Z, T * Z);
+
+      ctx.fillStyle = '#000a';
+      ctx.fillRect(x * T * Z + 2, y * T * Z + 2, 30, 15);
+      ctx.fillStyle = '#ffd479';
+      ctx.font = 'bold 13px ui-monospace, monospace';
+      ctx.textBaseline = 'top';
+      ctx.fillText(String(idx), x * T * Z + 5, y * T * Z + 3);
+    }
+  }
+
+  const p = document.createElement('p');
+  p.className = 'sub';
+  p.textContent = `${r.name} — cols ${r.col0}..${r.col0 + r.cols - 1}, rows ${r.row0}..${r.row0 + r.rows - 1}`;
+  out.append(p, c);
+  shots.push({ name: `zoom-${r.name}`, png: c.toDataURL('image/png') });
+}
+
+await fetch('/__shot', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ shots }),
+}).catch(() => {});
+
+document.getElementById('status').textContent = `saved ${shots.length}`;
+document.getElementById('status').className = 'sub ok';
+</script>
+</body>
+</html>

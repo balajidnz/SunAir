@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CluColor — atlas viewer</title>
+<link rel="stylesheet" href="../tests/test.css">
+</head>
+<body>
+<h1>Kenney atlases</h1>
+<p class="sub" id="status">loading…</p>
+<div id="out"></div>
+
+<script type="module">
+/**
+ * Renders each packed Kenney sheet upscaled with nearest-neighbour and an index
+ * label on every tile, so tiles can be chosen by number.
+ *
+ * Packed sheets have NO spacing. Tile sizes differ per sheet:
+ *   characters / backgrounds = 24px, tiles / farm = 18px.
+ */
+// Only the sheets the game actually ships. The Kenney vendor drop was deleted
+// once the packed sheets we use were copied into assets/img/tiles/ — re-download
+// from kenney.nl (URLs in DEVLOG) if more tiles are ever needed.
+const SHEETS = [
+  { name: 'tiles', src: '../assets/img/tiles/tiles.png', tile: 18, scale: 4 },
+  { name: 'farm', src: '../assets/img/tiles/farm.png', tile: 18, scale: 4 },
+  { name: 'backgrounds', src: '../assets/img/tiles/backgrounds.png', tile: 24, scale: 5 },
+];
+
+/** @param {string} src */
+const load = (src) => new Promise((res, rej) => {
+  const img = new Image();
+  img.onload = () => res(img);
+  img.onerror = () => rej(new Error(src));
+  img.src = src;
+});
+
+const out = document.getElementById('out');
+const shots = [];
+
+for (const sheet of SHEETS) {
+  const img = await load(sheet.src);
+  const cols = Math.round(img.width / sheet.tile);
+  const rows = Math.round(img.height / sheet.tile);
+  const s = sheet.scale;
+  const cell = sheet.tile * s;
+
+  const c = document.createElement('canvas');
+  c.width = cols * cell;
+  c.height = rows * cell;
+  const ctx = c.getContext('2d');
+
+  // Checkerboard, so transparent pixels are obvious.
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      ctx.fillStyle = (x + y) % 2 ? '#20242e' : '#171a22';
+      ctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+
+  // Index labels.
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textBaseline = 'top';
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const i = y * cols + x;
+      const px = x * cell + 2;
+      const py = y * cell + 2;
+      ctx.fillStyle = '#000c';
+      ctx.fillRect(px, py, String(i).length * 6 + 3, 12);
+      ctx.fillStyle = '#ffd479';
+      ctx.fillText(String(i), px + 2, py + 1);
+    }
+  }
+
+  const label = document.createElement('p');
+  label.className = 'sub';
+  label.textContent = `${sheet.name} — ${cols}x${rows} grid, ${sheet.tile}px tiles, ${cols * rows} slots`;
+  out.append(label, c);
+
+  shots.push({ name: `atlas-${sheet.name}`, png: c.toDataURL('image/png') });
+}
+
+const res = await fetch('/__shot', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ shots }),
+}).catch(() => null);
+
+const status = document.getElementById('status');
+status.textContent = res && res.ok ? `saved ${shots.length} atlases` : 'could not save — is serve.py running?';
+status.className = 'sub ' + (res && res.ok ? 'ok' : 'fail');
+</script>
+</body>
+</html>
