@@ -9,9 +9,14 @@ import { CARVING, CHART, LETTERS, normalize } from '../../../data/morse.js';
  *
  * Two things make this work, and both are cheap:
  *
- * 1. **The companion must produce the A-Z chart.** Nobody should have to leave
- *    the game and search the web to finish a birthday present. It arrives at hint
- *    level 1, always, and it can be asked for immediately.
+ * 1. **The A-Z chart is on screen from the start.** It used to be gated behind
+ *    hint level 1 — until you got there (~20s, or by asking), the bench was morse
+ *    with no key, which is a "leave the game and search the web" wall. And there
+ *    is no reason to gate it: the chart is the ALPHABET, not the answer. Seeing
+ *    that E is "·" does not tell you the carving says I LOVE YOU — you still have
+ *    to decode all eight letters and read them. A tool, not a spoiler, so it is
+ *    simply present. (It shipped visible anyway, by a CSS accident that a later
+ *    `[hidden]{display:none!important}` fix removed; this makes it deliberate.)
  *
  * 2. **The letters light up ON THE CARVING as she types.** Wired to `input`, not
  *    to a submit button. Ten lines, and it is the difference between a puzzle and
@@ -90,9 +95,14 @@ export function showMorse(root, { onTick, isPaused, companionName }) {
     input.spellcheck = false;
     input.placeholder = 'what does it say?';
 
+    // A small caption so it reads as a reference key, not decoration.
+    const chartLabel = document.createElement('p');
+    chartLabel.className = 'morse-chart-label';
+    chartLabel.textContent = 'the marks, letter by letter';
+
     const chart = document.createElement('div');
     chart.className = 'morse-chart';
-    chart.hidden = true;
+    // Visible from the start — it is the key you read the carving with, not a hint.
 
     for (const { letter, code } of CHART) {
       const row = document.createElement('span');
@@ -124,17 +134,13 @@ export function showMorse(root, { onTick, isPaused, companionName }) {
       isPaused,
       clockCeiling: CLOCK_CEILING,
 
-      onHint: (line, level) => {
+      onHint: (line) => {
         companion.hidden = false;
         safeRender(companion, `${companionName}: ${line.text}`);
         companion.classList.remove('is-new');
         void companion.offsetWidth;
         companion.classList.add('is-new');
         ask.textContent = `ask ${companionName} again`;
-
-        // The chart. Non-negotiable — without it this is a wall, and she would
-        // have to leave the game to get past it.
-        if (line.shows === 'morse-chart' || level >= 1) chart.hidden = false;
       },
 
       onAutoSolve: () => {
@@ -214,7 +220,7 @@ export function showMorse(root, { onTick, isPaused, companionName }) {
     ask.addEventListener('click', () => hintCtl.ask());
     document.addEventListener('keydown', onKey);
 
-    panel.append(title, carving, input, chart, companion, ask);
+    panel.append(title, carving, input, chartLabel, chart, companion, ask);
     root.append(panel);
     input.focus();
   });

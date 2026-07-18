@@ -44,7 +44,7 @@ export const DIALOGUE = {
   benchSighted: [
     { who: 'companion', text: 'Wait. Do you see that?' },
     { who: 'player', text: 'A bench.' },
-    { who: 'companion', text: 'Something about it ebing red. Feels so familiar.' },
+    { who: 'companion', text: 'Something about it being red. Feels so familiar.' },
     { who: 'player', text: '...I know it.' },
     { who: 'companion', text: 'So do I.' },
   ],
@@ -79,7 +79,7 @@ export const DIALOGUE = {
 
       wrong: [
         { who: 'lion', text: 'No.' },
-        { who: 'lion', text: 'Well do you really chrish that? And does that shape you?' },
+        { who: 'lion', text: 'Well do you really cherish that? And does that shape you?' },
         { who: 'lion', text: 'No I\'d think more before I answer' },
         { who: 'lion', text: 'Try again. I have waited longer than you have lived.' },
       ],
@@ -144,7 +144,7 @@ export const DIALOGUE = {
        * That is why level 3 must not promise to take over, and level 4 must.
        */
       hints: [
-        { who: 'companion', text: 'It wants to be put back. I think we have to fix it.' },
+        { who: 'companion', text: 'It wants to be put back. I think we have to fix it using the gap.' },
         { who: 'companion', text: 'Slide the pieces. There\'s a gap, let\'s try to use it.' },
         { who: 'companion', text: 'That one. Move that one first. Trust me.' },
         { who: 'companion', text: 'Keep going! I\'ll tell you which one, every time. I can see it now.' },
@@ -180,7 +180,7 @@ export const DIALOGUE = {
       // Hint level 1 SHOWS the chart. This is not optional.
       hints: [
         { who: 'companion', text: 'These marks aren\'t random. They\'re a pattern. They repeat.' },
-        { who: 'companion', text: 'Wait! I remember this. I remember the shape of it.', shows: 'morse-chart' },
+        { who: 'companion', text: 'Wait! I remember this. I remember the shape of it.' },
         { who: 'companion', text: 'Two dots. That\'s one letter, all by itself. Start there.' },
         { who: 'companion', text: 'The middle word... that\'s L, O, V, E. I\'d know it anywhere.' },
         { who: 'companion', text: 'I love you.\nThat\'s what it says. That\'s what it\'s always said.' },

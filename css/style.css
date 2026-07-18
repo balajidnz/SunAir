@@ -23,11 +23,13 @@
  *                   this and I went looking for a JS bug.
  *   .maker-result   (display:grid) — the empty link box, "copy" and "share" showed
  *                   from the moment the maker opened, before any link existed.
- *   .morse-chart    (display:flex) — ⚠ THE WORST. The morse chart is a *hint*, given
- *                   at level 1. It was on screen from the start, so act 3's puzzle
- *                   handed you its own answer key for free.
  *   .panel-row      (display:flex)
  *   .nudge          (display:flex)
+ *
+ * (The morse chart was ALSO stuck-visible by this same trick — but that one turned
+ * out to be RIGHT: the chart is the alphabet, not the answer, and gating it made
+ * the puzzle a leave-the-game-and-google wall. So it is now shown deliberately and
+ * never sets `hidden`. See puzzles/morse.js.)
  *
  * One rule fixes all of them, and every future one.
  */
@@ -582,6 +584,14 @@ body { display: grid; place-items: center; }
 .morse-input.is-wrong { border-color: #7a3a36; }
 
 /* The chart she remembers. Without it, this puzzle is a wall. */
+.morse-chart-label {
+  margin: 6px 0 0;
+  font-size: clamp(9px, 1.05vw, 12px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6f7891;
+}
+
 .morse-chart {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));

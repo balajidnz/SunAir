@@ -14,6 +14,7 @@
 import { MORSE, ANSWER, LETTERS, CARVING, CHART, normalize } from '../data/morse.js';
 import { createHints } from '../js/game/hints.js';
 import { DIALOGUE } from '../data/dialogue.js';
+import { showMorse } from '../js/game/puzzles/morse.js';
 
 const results = [];
 const check = (name, ok, detail) =>
@@ -101,10 +102,30 @@ check('she is not punished for a typo at the END of a correct prefix',
   const LINES = DIALOGUE.bench.puzzle.hints;
   const CEILING = 3; // must match morse.js
 
-  // The chart MUST arrive early. Without it this is a wall, and she would have to
-  // leave the game and search the web to finish a birthday present.
-  const chartLevel = LINES.findIndex((l) => l.shows === 'morse-chart');
-  check('the companion produces the A-Z chart by hint level 1', chartLevel === 1, chartLevel);
+  // The chart must be ON SCREEN FROM THE START, not gated behind a hint. Morse
+  // with no key is a wall you leave the game to climb — and the chart is the
+  // alphabet, not the answer, so there is nothing to gate. Mount the real puzzle
+  // and prove the chart is visible with all 26 letters before any hint fires.
+  {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const done = showMorse(root, {
+      onTick: () => () => {},          // register nothing, unsubscribe is a no-op
+      isPaused: () => false,
+      companionName: 'her',
+    });
+    const chart = root.querySelector('.morse-chart');
+    check('the A-Z chart is present from the start (not gated behind a hint)',
+      !!chart && !chart.hidden, chart ? `hidden=${chart.hidden}` : 'missing');
+    check('the on-screen chart has all 26 letters',
+      chart?.querySelectorAll('.morse-chart-row').length === 26,
+      chart?.querySelectorAll('.morse-chart-row').length);
+    // Solve it so the promise settles and the puzzle tears itself down.
+    const input = root.querySelector('.morse-input');
+    input.value = ANSWER;
+    input.dispatchEvent(new Event('input'));
+    void done.then(() => root.remove());
+  }
 
   let autoSolved = false;
   const ctl = createHints({
