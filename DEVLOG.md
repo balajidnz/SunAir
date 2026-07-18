@@ -14,21 +14,27 @@ deployed on the real domain. Nothing is a placeholder.
 | | |
 |---|---|
 | **The game** | **`https://sunair.fun/clucolor/`** — live, HTTPS, **unlisted** |
-| **The portal** | `https://sunair.fun` — live. Shows "Soon." CluColor is commented out until the 21st. |
+| **The portal** | `https://sunair.fun` — live, poster design. Real about/privacy/contact. CluColor unlisted until the 21st. |
 | Playable | logo → picker → intro → lion (**riddle**) → house (**sliding photo**) → bench (**morse**) → ending → maker → shareable link |
-| Tests | encode 28 · ending 27 · riddle 41 · dialogue 14 · slider 25 · morse 30 = **165** |
+| Tests | encode 28 · ending 28 · riddle 41 · dialogue 20 · slider 25 · morse 31 = **173** |
 | Music | ✅ four layers, phase-locked, 1.2MB. Grows as the world does. |
-| Dialogue | ✅ Balaji rewrote it. The words are his. |
-| Left | **playtest feedback** · day 10 freeze + `og:image` |
+| Dialogue | ✅ Balaji's words. Playtested. |
+| Email | ✅ `hello@sunair.fun` — Zoho, with SPF + DKIM + DMARC |
+| SonicWall | ✅ was auto-rated **Malware**; disputed with a real site behind it; **re-rated "Games."** |
+| Playtest | ✅ done. Timers confirmed right. Fixes shipped (see Day 10). |
+| Left | day 11 **freeze** + `og:image` · the 21st: publish the portal card |
 
-**Publishing on the 21st is deleting two `<!--` markers** in the portal's `index.html`.
-The "Soon." line removes itself (`.games:has(.game) ~ .soon`), so there is no second edit
-to forget and no way to ship a live game with "Soon." still sitting under it.
+**Publishing on the 21st** (portal repo): copy the logo to `img/clucolor.png`, add one
+`<li>` game card to `index.html`, push. The card's markup is kept OUT of the served file
+until then — a commented-out `<a href>` still ships to every visitor and view-source reads
+the URL off it. The empty-state block hides itself once a card exists (`body:has(.game)
+.empty`), so there is no "Soon." left stranded and no second edit to forget.
 
 **Waiting on Balaji:**
-- [x] ~~Rewrite `data/dialogue.js`~~ — done. The words are his.
+- [x] ~~Rewrite `data/dialogue.js`~~ — done. The words are his, playtested.
 - [x] ~~The music~~ — done (day 8).
-- [ ] **Playtest feedback** — three people tested it. Tuning pending.
+- [x] ~~Playtest~~ — done. Hint timers confirmed right; nothing to retune.
+- [x] ~~Domain / email / malware rating~~ — all resolved (Days 9-10).
 
 ## Audio — the ORIGINAL SPEC (kept for the record). ⚠ SUPERSEDED BY DAY 8.
 
@@ -95,6 +101,145 @@ everything else.
 be in sync.
 
 ---
+
+## Day 10 — 2026-07-18 — playtest fixes, the maker, and a malware rating
+
+Everything on this day came from real people playing the live build (or a machine
+refusing to let them).
+
+### ⚠ SonicWall rated `sunair.fun` as **Malware**
+
+A tester behind a SonicWall firewall (schools, offices, colleges run these) couldn't
+reach the site. The appliance had auto-classified the domain as **Malware** — not
+"unrated", *malware* — which propagates to every SonicWall box everywhere.
+
+**The cause was almost certainly the coming-soon page.** At rating time `sunair.fun` served
+one line — "Soon." — with no about page, no contact, no policies, on a `.fun` domain resolving
+to GitHub Pages' shared IPs (which host a lot of real phishing). To an automated classifier
+that is indistinguishable from a parked/staging domain, which is exactly what malware uses.
+
+**The fix was to make it a real site, then dispute.** Added `/about.html`, `/privacy.html`
+(an honest one — nothing is collected because there is nowhere for it to go), a contact
+address, `robots.txt`, `sitemap.xml`, and real prose on the homepage. Then requested a
+re-rating with the source repo linked. **Re-rated "Games."** Resolved.
+
+The lesson worth keeping: **a content-free page is a security signal, not a neutral
+placeholder.** "Hide it until launch" and "look legitimate to a scanner" are in direct
+tension, and the scanner wins.
+
+### The domain move had a TLS tail — which is why the deploy happened on Day 9, not the 21st
+
+Moving a custom domain between repos makes GitHub re-verify DNS and re-issue the certificate.
+Until it lands the site is HTTP-only, and `AudioContext` / `clipboard` / `navigator.share`
+**all refuse to run without a secure context** — silent music, dead share button, game looks
+broken. It cleared in minutes; it is documented as up to 24 hours. Doing this on the morning
+of the 21st would have been a real way to lose the gift.
+
+### Email: `hello@sunair.fun`, and why not the obvious routes
+
+Wanted a contact address at the domain (a gmail on a "personal site" is a weak legitimacy
+signal, and the site should not carry a real name). The obvious options both fail for a
+domain-only purchase: **Gmail can't receive at your domain without paid Workspace**, and
+**Hostinger's forwarders need a paid mail plan**. **Zoho Mail's Forever Free** gives a real
+mailbox that can *send* (forwarding can't) for free — its only catch is no IMAP/POP/SMTP, so
+you live in Zoho's webmail, which for a handful of mails a year is nothing.
+
+Set up as `MX` + `SPF` + `DKIM` + `DMARC`. Email is `MX` records, the site is `A` records —
+independent types that cannot collide, so none of this could touch the live game. The full
+SPF/DKIM/DMARC set also *helps* the malware case: an authenticated domain reads as maintained.
+
+**Cloudflare was considered and declined — for the right reason, eventually.** It buys
+nothing for "more games" (GitHub's user-site mechanism already makes a new game a new repo
+and nothing else). What it *would* buy is real HTTP headers and Workers — worth an afternoon
+**after** the 22nd, never during. And it cannot send email either: the orange-cloud proxy is
+HTTP-only; mail never passes through it, so A-vs-B is irrelevant to email.
+
+### The portal became a poster
+
+Balaji: "more fun and minimalist, a sunny beach morning." Three variants built and shown side
+by side; he picked the **poster** — flat sand, one hard sun, a two-tone SVG wave across the
+bottom, sea-blue ink so everything carries a blue undertone without anything being "the blue
+bit." Cards press into their offset shadow on hover.
+
+- **The wave started `position: fixed` and drowned the footer.** Fixed pins to the viewport,
+  so on any page long enough to scroll the text slid under the water. Changed to `absolute` —
+  it belongs to the page, not the window.
+- **No web fonts** — the CSP blocks them; `ui-rounded` degrades gracefully.
+- Author is **"Rico 🧸"** and Balaji's name appears in **zero visible text** on any page. The
+  one unavoidable leak — the username inside a GitHub URL — was pointed at the portal repo
+  (not his profile, which lists the game repo), and the game's markup was **removed from the
+  served HTML entirely** rather than commented out, because *a comment is not a secret*:
+  view-source reads a commented `<a href>` straight off.
+
+### Playtest — three people, their machines, watched in silence
+
+The hint timers turned out **right as tuned** — no retune needed. What the playtest caught was
+never the puzzles; it was the game failing to teach its own controls:
+
+| what happened | the fix |
+|---|---|
+| The intro says "Hold → to walk" — **during dialogue, when → does nothing.** Everyone pressed the arrow the line named and got nothing. | **Any key advances now** (modifiers/shortcuts excluded), and the arrow they press is still held when the box closes, so they start walking immediately. |
+| A bare blinking `▾` taught nobody how to continue. | The caret spells itself out — **"click or press any key ▾"** — until they advance once, then collapses forever. |
+| After solving a puzzle, players didn't know the world was waiting for them to walk on. | A **nudge** ("hold → to walk", arrow in the bench red) appears whenever they *can* walk and aren't, and vanishes the instant they move. One mechanism, covers every stall. |
+
+### ⚠ The auto-repeat bug I introduced fixing the one above
+
+"Any key advances" had a trap: **holding a key fires ~30 keydowns/second.** Walking into the
+lion with → held meant the dialogue opened and **ate the entire scene** before the thumb
+lifted — silently, no error. Fixed with `if (e.repeat) return`: a held key is walking, not
+reading. Pinned with a test that fires 30 repeats and asserts nothing moves.
+
+### ⚠ `[hidden]` is the lowest-priority rule in the browser
+
+Auditing the maker turned up a whole *class* of silent bug. `hidden` works via the UA
+stylesheet's `[hidden]{display:none}` — and **any author rule that sets `display` outranks
+it**, so `el.hidden = true` does nothing. Five elements were affected, and one was a real
+gameplay bug: **the morse chart** (`display:flex`) was on screen from the start, so Act 3 had
+been handing out its own answer key. One rule fixes all of them and every future one:
+`[hidden] { display: none !important; }`.
+
+### The morse chart: from "always visible by accident" to "always visible on purpose"
+
+Fixing `[hidden]` correctly hid the chart until hint level 1 — which turned out to be *worse*:
+morse with no key is a leave-the-game-and-google wall. The realisation: **the chart is the
+alphabet, not the answer.** Seeing that E is "·" doesn't reveal the carving says I LOVE YOU —
+you still decode all eight letters. Nothing to gate. It is now shown from the start with a
+caption, deliberately.
+
+### The maker, rebuilt twice
+
+A tester: *"it wasn't clear which part was changing"* / *"clicking sign with name and
+signature isn't doing anything."* They weren't asking for a feature — the maker never showed
+its own effect. (And the disclosure button *literally* did nothing: `.maker-extras` had
+`display:grid`, the `[hidden]` bug again.)
+
+- **V2** answered by adding a live preview, captions, per-field labels. Correct, and awful —
+  a wall of instructions in front of a love letter. Balaji: *"if I was a user I would just
+  leave."*
+- **V3** deletes the distinction instead of explaining it: **you type into the ending
+  itself.** The card is the real ending's markup with a caret in it; the signature sits where
+  it will sit; the names are two blanks in a sentence. No preview, no labels, no disclosure
+  button — the input *is* the preview.
+
+Also collapsed "make link → copy" into one button. The link is **rebuilt as you type**, so
+the copy is synchronous inside the click — an `await` between gesture and clipboard is
+rejected by Safari, so the two-step version would have silently failed on every Mac and
+iPhone.
+
+### Tried and cut: per-line dialogue voices
+
+Added per-speaker talking clips (male/female/lion) that played while a line typed, plus an
+option to block advancing until a line finished. Balaji found the clips **cut off wrong**
+(they loop, so a line shorter than the ~3s clip chopped it mid-word) and cut the whole thing,
+advance-lock included. Reverted cleanly — `main.js`, `dialogue.js`, `screens.js` back to zero
+diff; his recordings left untouched in `assets/`. A per-character *blip* (a tick per letter,
+which can't sound cut off) would suit a typewriter better, noted for another day.
+
+### One spelling fix
+
+`benchSighted`: "Something about it **ebing** red" → "being". The only actual misspelling in
+`data/dialogue.js`; a few missing-punctuation spots were flagged and left to Balaji, since the
+words are his.
 
 ## Day 9 — 2026-07-14 — polish, and the deploy
 
