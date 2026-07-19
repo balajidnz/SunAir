@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>og card generator</title>
+<style>
+  body { margin: 0; background: #05070b; color: #8f98ad;
+         font: 13px ui-monospace, Menlo, monospace; display: grid;
+         place-items: center; min-height: 100vh; gap: 14px; padding: 20px; }
+  canvas { width: 600px; height: 315px; border: 1px solid #2c3240; image-rendering: auto; }
+  b { color: #cfd6e4; }
+</style>
+</head>
+<body>
+
+<canvas id="c" width="1200" height="630"></canvas>
+<p id="status">drawing…</p>
+
+<script type="module">
+/**
+ * The social card the gift ARRIVES as. 1200x630 (the universal OG size), saved to
+ * .shots/og.png, then copied to assets/img/og.png.
+ *
+ * The whole visual thesis in one frame: a dead grey world, and the one thing in it
+ * that has colour — the red bench. That is the game, before you have played a
+ * second of it.
+ */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 1200, H = 630;
+
+const load = (src) => new Promise((res, rej) => {
+  const img = new Image();
+  img.onload = () => res(img);
+  img.onerror = rej;
+  img.src = src;
+});
+
+const [logo, bench] = await Promise.all([
+  load('../assets/img/logo.png'),
+  load('../assets/img/props/bench.png'),
+]);
+
+// --- the dead world --------------------------------------------------------
+// A cool grey vertical wash — the same #2a3040 dead-tint the game grades toward,
+// over near-black. Not flat: a faint vignette so the centre holds the eye.
+const bg = ctx.createLinearGradient(0, 0, 0, H);
+bg.addColorStop(0, '#20242e');
+bg.addColorStop(0.55, '#181b22');
+bg.addColorStop(1, '#101318');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, W, H);
+
+const vig = ctx.createRadialGradient(W / 2, H / 2, 120, W / 2, H / 2, 760);
+vig.addColorStop(0, 'rgba(0,0,0,0)');
+vig.addColorStop(1, 'rgba(0,0,0,0.5)');
+ctx.fillStyle = vig;
+ctx.fillRect(0, 0, W, H);
+
+// A suggested ground line — the world the two of them walk. Low, so the bench
+// has room to sit on it well clear of the text.
+const GROUND = 520;
+ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+ctx.lineWidth = 2;
+ctx.beginPath();
+ctx.moveTo(0, GROUND);
+ctx.lineTo(W, GROUND);
+ctx.stroke();
+
+// --- the logo --------------------------------------------------------------
+// Anti-aliased artwork — scale DOWN only, smoothing ON (it is not pixel art).
+// No tagline: just the name, the bench, and the address. The image should read
+// in half a second in a chat list, and three words of body copy don't survive
+// being 200px wide in a thumbnail anyway.
+ctx.imageSmoothingEnabled = true;
+const logoW = 600;
+const logoH = logoW * (logo.height / logo.width);
+ctx.drawImage(logo, (W - logoW) / 2, 150, logoW, logoH);
+
+// --- the bench: the one spot of red ----------------------------------------
+// Pixel art — smoothing OFF, integer scale, sitting ON the ground line.
+ctx.imageSmoothingEnabled = false;
+const scale = 4;
+const bw = bench.width * scale;
+const bh = bench.height * scale;
+ctx.drawImage(bench, (W - bw) / 2, GROUND - bh + 6, bw, bh);
+
+// --- the address -----------------------------------------------------------
+ctx.imageSmoothingEnabled = true;
+ctx.fillStyle = '#5a637a';
+ctx.textAlign = 'center';
+ctx.font = '22px ui-monospace, Menlo, monospace';
+ctx.fillText('sunair.fun', W / 2, 578);
+
+// --- save ------------------------------------------------------------------
+const res = await fetch('/__shot', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ shots: [{ name: 'og', png: canvas.toDataURL('image/png') }] }),
+}).catch((e) => ({ ok: false, e }));
+
+document.getElementById('status').innerHTML = res.ok
+  ? 'saved to <b>.shots/og.png</b> — copy it to assets/img/og.png'
+  : 'POST failed — is serve.py running?';
+</script>
+
+</body>
+</html>
